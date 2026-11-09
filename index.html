@@ -291,6 +291,14 @@
   .pilihan button:disabled{cursor:default}
   @keyframes denyut{50%{transform:scale(1.04)}}
   @keyframes goyang{20%,60%{transform:translateX(-.3em)}40%,80%{transform:translateX(.3em)}}
+
+  /* ===== Kuiz: pilihan bergambar ===== */
+  .pilihan.gambar{flex:1;min-height:0;grid-template-columns:1fr 1fr;grid-auto-rows:minmax(0,1fr);gap:.45em}
+  .pilihan.gambar button{position:relative;flex-direction:column;align-items:stretch;gap:.25em;padding:.25em;min-height:0;overflow:hidden;text-align:center}
+  .pilihan.gambar .gb{flex:1;min-height:0;display:block;border-radius:.6em;overflow:hidden;background:#F6E6C8}
+  .pilihan.gambar .gb img{width:100%;height:100%;object-fit:contain;display:block}
+  .pilihan.gambar .huruf{position:absolute;top:.4em;left:.4em;z-index:2;box-shadow:0 .12em 0 rgba(0,0,0,.28)}
+  .pilihan.gambar .cap{font-size:.66em;line-height:1.15;font-weight:800;padding:0 .1em .05em}
   .maklum{display:none;padding:.5em .7em;border-radius:.75em;font-size:.86em;line-height:1.35;font-weight:600}
   .maklum.ok{display:block;background:var(--hijau-m);border:.14em solid var(--hijau)}
   .maklum.tidak{display:block;background:var(--merah-m);border:.14em solid var(--merah)}
@@ -335,7 +343,6 @@
   .qr-kolum p{margin:0;font-size:.66em;font-weight:800;text-align:center;line-height:1.2;color:var(--teks-2)}
   .ar-teks{display:flex;flex-direction:column;align-items:center;gap:.35em;text-align:center}
   .ar-teks p{margin:0;font-size:.82em;font-weight:700;line-height:1.25}
-  .ar-teks .butang{font-size:.88em;padding:.42em 1em}
   #besarkan{position:fixed;inset:0;z-index:99;background:rgba(15,10,40,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:14px;cursor:zoom-out}
   #besarkan img{max-width:100%;max-height:74vh;width:auto;height:auto;object-fit:contain;border-radius:14px;background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.5)}
   #besarkan p{color:#fff;font-weight:800;text-align:center;font-size:15px;max-width:34em;margin:0}
@@ -652,8 +659,7 @@
       </div>
       <div class="ar-teks">
         <p>Imbas QR, kemudian halakan kamera ke gambar.</p>
-        <a href="#" target="_blank" rel="noopener" class="butang b-oren interaktif" id="pautan-ar-pb1" data-ar="pb1">Buka AR dalam tab baharu ↗</a>
-      </div>
+        </div>
       <ul class="babak">
         <li><span>1</span>Peribahasa muncul selepas imbasan</li>
         <li><span>2</span>Rumah, tangga, tempayan dan batuk</li>
@@ -853,8 +859,7 @@
       </div>
       <div class="ar-teks">
         <p>Imbas QR, kemudian halakan kamera ke gambar.</p>
-        <a href="#" target="_blank" rel="noopener" class="butang b-hijau interaktif" id="pautan-ar-pb2" data-ar="pb2">Buka AR dalam tab baharu ↗</a>
-      </div>
+        </div>
       <ul class="babak">
         <li><span>1</span>Peribahasa muncul selepas imbasan</li>
         <li><span>2</span>Acuan dan kuih tradisional</li>
@@ -1110,8 +1115,9 @@ const BANK = [
    p:["Ruang peralihan sebelum masuk ke rumah","Kekayaan pemilik rumah","Kesusahan hidup","Tempat menyimpan barang"], betul:0,
    x:"Tangga ialah ruang peralihan. Batuk yang ditinggalkan di situ menunjukkan tindakan yang tidak disempurnakan."},
   {set:"pb1", s:'Situasi manakah yang paling sesuai dengan "Melepaskan batuk di tangga"?',
-   p:["Murid membersihkan kelas tetapi penyapu tidak disimpan semula","Anak meniru sikap rajin ibunya","Pelajar mendapat dua manfaat dalam satu tindakan","Nasihat guru tidak diendahkan oleh murid"], betul:0,
-   x:"Kerja membersihkan kelas tidak disempurnakan kerana penyapu ditinggalkan, sama seperti batuk yang ditinggalkan di tangga."},
+   g:["gambar-kuiz/pb1-bersepah.jpg", "gambar-kuiz/pb1-menyapu.jpg", "gambar-kuiz/pb1-meja.jpg", "gambar-kuiz/pb1-sofa.jpg"],
+   p:["Budak keluar rumah, rumah dibiarkan bersepah", "Budak menyapu lantai", "Budak mengelap meja", "Budak mengelap sofa"], betul:0,
+   x:"Budak itu keluar rumah dan membiarkan rumah bersepah. Kerja tidak disempurnakan, seperti batuk yang ditinggalkan di tangga."},
   {set:"pb1", s:"Nilai akal budi Melayu yang ditonjolkan oleh peribahasa ini ialah…",
    p:["Tertib, kebersihan dan tanggungjawab","Kerjasama dan tolong-menolong","Berjimat cermat","Hormat kepada orang tua"], betul:0,
    x:"Peribahasa ini menekankan tertib, kebersihan dan tanggungjawab dalam menyempurnakan sesuatu pekerjaan."},
@@ -1135,8 +1141,9 @@ const BANK = [
    p:["Alat yang digunakan untuk membentuk kuih","Bahan utama membuat kuih","Bekas untuk menyimpan kuih","Nama sejenis kuih tradisional"], betul:0,
    x:"Acuan ialah alat untuk membentuk kuih supaya rupanya tertentu dan seragam."},
   {set:"pb2", s:'Situasi manakah yang paling sesuai dengan "Bagaimana acuan, begitulah kuihnya"?',
-   p:["Ayah seorang yang sopan, lalu anak mengikut tutur kata dan adab ayahnya","Murid tidak menyimpan penyapu selepas membersihkan kelas","Pekerja menghantar laporan yang tidak lengkap","Semangat belajar seseorang cepat hilang"], betul:0,
-   x:"Anak meniru tingkah laku ayahnya. Ini menunjukkan teladan ibu bapa membentuk sikap anak."},
+   g:["gambar-kuiz/pb2-katil.jpg", "gambar-kuiz/pb2-telefon.jpg", "gambar-kuiz/pb2-pinggan.jpg", "gambar-kuiz/pb2-masak.jpg"],
+   p:["Ibu dan anak mengemas katil dan melipat pakaian", "Ibu berbual di telefon, anak bermain mainan yang bersepah", "Ibu mencuci pinggan, anak bermain tablet", "Ibu memasak, anak menonton televisyen"], betul:0,
+   x:"Anak meniru perbuatan baik ibunya yang rajin mengemas. Inilah bagaimana acuan, begitulah kuihnya."},
   {set:"pb2", s:"Menurut akal budi Melayu dalam peribahasa ini, ibu bapa mendidik anak melalui…",
    p:["Nasihat dan juga tingkah laku yang diperlihatkan","Hukuman sahaja","Pemberian hadiah","Guru tuisyen"], betul:0,
    x:"Ibu bapa bukan sahaja mendidik melalui nasihat, tetapi juga melalui tingkah laku yang dilihat oleh anak."},
@@ -1187,10 +1194,16 @@ function paparSoalan(){
   $("maklum").className="maklum"; $("maklum").textContent="";
   $("seterusnya").classList.add("tersembunyi");
   const kotak=$("pilihan"); kotak.innerHTML="";
-  kocok(q.p.map((t,i)=>({t,betul:i===q.betul}))).forEach((o,i)=>{
+  kotak.classList.toggle("gambar", !!q.g);
+  kocok(q.p.map((t,i)=>({t,betul:i===q.betul,g:q.g?q.g[i]:null}))).forEach((o,i)=>{
     const b=document.createElement("button");
-    b.innerHTML=`<span class="huruf">${HURUF[i]}</span><span></span>`;
-    b.lastChild.textContent=o.t; b.dataset.betul=o.betul;
+    if(o.g){
+      b.innerHTML=`<span class="huruf">${HURUF[i]}</span><span class="gb"><img alt=""></span><span class="cap"></span>`;
+      const im=b.querySelector("img"); im.src=o.g; im.alt=o.t; b.querySelector(".cap").textContent=o.t;
+    } else {
+      b.innerHTML=`<span class="huruf">${HURUF[i]}</span><span></span>`; b.lastChild.textContent=o.t;
+    }
+    b.dataset.betul=o.betul;
     b.onclick=()=>jawab(b,o.betul,q);
     kotak.appendChild(b);
   });
@@ -1244,9 +1257,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
 </script>
 <script>
 /* ================= TETAPAN AR (ubah di sini sahaja) =================
-   pautan : alamat laman AR.
+   pautan : alamat laman AR (dimasukkan ke dalam kod QR).
             - 'batuk/'  = relatif: buku dan AR berada dalam SATU repositori GitHub (disyorkan).
-              Kod QR dan butang akan sentiasa betul walaupun nama repositori ditukar.
+              Kod QR akan sentiasa betul walaupun nama repositori ditukar.
             - 'https://...' = alamat penuh, jika AR berada dalam repositori lain.
    gambar : fail gambar sasaran untuk dimuat turun dan dicetak. */
 const AR = {
@@ -1267,7 +1280,6 @@ function lukisQR(sasaran, teks){
 Object.keys(AR).forEach(k=>{
   const url = mutlak(AR[k].pautan);
   document.querySelectorAll('[data-qr="'+k+'"]').forEach(el=>lukisQR(el, url));
-  document.querySelectorAll('a[data-ar="'+k+'"]').forEach(a=>{ a.href = url; });
 });
 
 /* Besarkan gambar sasaran supaya mudah diimbas dari skrin */
