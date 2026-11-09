@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#5A2E12">
+
+  <title>PeribahasaAR - Melepaskan Batuk di Tangga</title>
+
+  <!-- SAMA seperti sebelum ini: A-Frame dan MindAR (percuma, tiada pemasangan aplikasi) -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    :root {
+      --kayu: #5A2E12;
+      --kayu-muda: #8B5A2B;
+      --emas: #C9962B;
+      --emas-cerah: #F2C760;
+      --krim: #FFF7E8;
+      --hijau: #1F6B4F;
+      --teks: #3B2412;
+      --bayang: 0 4px 16px rgba(40, 20, 5, 0.40);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--teks);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #ui { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+    #ui button { pointer-events: auto; }
+
+    #status {
+      position: absolute;
+      top: calc(10px + env(safe-area-inset-top));
+      left: 10px;
+      max-width: calc(100% - 140px);
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255, 247, 232, 0.94);
+      border: 2px solid var(--emas);
+      box-shadow: var(--bayang);
+      font-size: 13px;
+      line-height: 1.25;
+      font-weight: 600;
+      color: var(--hijau);
+    }
+    body.target-found #status { display: none; }
+
+    /* Penunjuk babak */
+    #atas {
+      position: absolute;
+      top: calc(18px + env(safe-area-inset-top));
+      left: 12px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    body.target-found #atas { display: flex; }
+    #dots { display: flex; gap: 6px; }
+    #dots i {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: rgba(255, 247, 232, 0.45);
+      border: 1px solid rgba(90, 46, 18, 0.6);
+      transition: background 0.3s, transform 0.3s;
+    }
+    #dots i.aktif { background: var(--emas-cerah); transform: scale(1.25); }
+
+    #kawalan {
+      position: absolute;
+      top: calc(8px + env(safe-area-inset-top));
+      right: 8px;
+      display: none;
+      gap: 8px;
+    }
+    body.target-found #kawalan { display: flex; }
+    .bulat {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      border: 2px solid var(--emas);
+      background: rgba(90, 46, 18, 0.88);
+      color: var(--emas-cerah);
+      display: flex; align-items: center; justify-content: center;
+      padding: 0;
+      cursor: pointer;
+      box-shadow: var(--bayang);
+      touch-action: manipulation;
+    }
+    .bulat svg { width: 24px; height: 24px; fill: currentColor; }
+    .bulat:active { transform: scale(0.94); }
+    .bulat[hidden] { display: none; }
+
+    .besar {
+      min-height: 54px;
+      padding: 0 18px;
+      border-radius: 16px;
+      border: 3px solid var(--emas-cerah);
+      background: var(--kayu);
+      color: var(--emas-cerah);
+      font-family: inherit;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      box-shadow: var(--bayang), inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .besar:active { transform: scale(0.97); }
+    .besar.hijau { background: var(--hijau); color: #fff; border-color: #fff; }
+    .besar.cerah { background: var(--krim); color: var(--kayu); border-color: var(--kayu-muda); }
+    .besar:disabled { opacity: 0.35; }
+    .besar[hidden] { display: none; }
+
+    /* Bahagian bawah: disusun dalam satu lajur supaya tidak bertindih */
+    #bawah {
+      position: absolute;
+      left: 10px; right: 10px;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    #btn-mula {
+      min-width: 190px;
+      min-height: 62px;
+      font-size: 24px;
+      display: none;
+      animation: denyut 1.6s ease-in-out infinite;
+    }
+    @keyframes denyut {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+    #aksi {
+      display: none;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    #nav {
+      display: none;
+      width: 100%;
+      max-width: 560px;
+      gap: 10px;
+    }
+    #nav .besar { flex: 1; padding: 0 10px; }
+    #btn-restart { font-size: 16px; line-height: 1.15; }
+    #sari {
+      width: 100%;
+      max-width: 560px;
+      min-height: 54px;
+      padding: 10px 16px;
+      border-radius: 16px;
+      background: rgba(58, 30, 12, 0.90);
+      border: 2px solid var(--emas);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.3;
+      text-align: center;
+      box-shadow: var(--bayang);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    #sari.ada { animation: sariMasuk 0.35s ease both; }
+    @keyframes sariMasuk {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    #toast {
+      position: absolute;
+      left: 50%;
+      top: 40%;
+      transform: translateX(-50%);
+      max-width: 82%;
+      padding: 12px 18px;
+      border-radius: 14px;
+      background: rgba(255, 247, 232, 0.97);
+      border: 2px solid var(--emas);
+      box-shadow: var(--bayang);
+      font-size: 16px;
+      font-weight: 600;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+    #toast.papar { opacity: 1; }
+
+    body.target-found #sari.ada { display: flex; }
+    body.target-found #aksi.ada { display: flex; }
+    body.target-found #nav.ada { display: flex; }
+    body.target-found #btn-mula.ada { display: block; }
+
+    @media (prefers-reduced-motion: reduce) {
+      #btn-mula { animation: none; }
+      #sari.ada { animation: none; }
+    }
+    @media (max-height: 600px) {
+      #sari { font-size: 16px; min-height: 46px; padding: 7px 12px; }
+      .besar { min-height: 50px; font-size: 16px; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ===================== ANTARA MUKA (HTML) ===================== -->
+  <div id="ui">
+    <div id="status">Batuk: sedang memulakan kamera...</div>
+
+    <div id="atas">
+      <div id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+
+    <div id="kawalan">
+      <button id="btn-jeda" class="bulat" type="button" aria-label="Jeda atau main" hidden></button>
+      <button id="btn-ulang" class="bulat" type="button" aria-label="Main semula" hidden>
+        <svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>
+      </button>
+      <button id="btn-bisu" class="bulat" type="button" aria-label="Senyap atau bunyi"></button>
+    </div>
+
+    <div id="bawah">
+      <button id="btn-mula" class="besar" type="button">Mula &#9654;</button>
+
+      <div id="aksi">
+        <button id="btn-kembali" class="besar cerah" type="button" hidden>&#8592; Kembali</button>
+        <button id="btn-kuiz" class="besar hijau" type="button" hidden>Teruskan ke Kuiz</button>
+      </div>
+
+      <div id="nav">
+        <button id="btn-prev" class="besar cerah" type="button">&#8249; Sebelumnya</button>
+        <button id="btn-next" class="besar" type="button">Seterusnya &#8250;</button>
+        <button id="btn-restart" class="besar" type="button" hidden>&#8634; Belajar semula</button>
+      </div>
+
+      <div id="sari" role="status" aria-live="polite"></div>
+    </div>
+    <div id="toast"></div>
+  </div>
+
+  <!-- ================================================================
+       ADEGAN AR — tetapan kamera & penjejakan imej KEKAL SAMA.
+       <a-camera> juga TIDAK diubah daripada versi asal anda.
+       ================================================================ -->
+  <a-scene
+    mindar-image="imageTargetSrc: ./target-baharu.mind; autoStart: true;"
+    color-space="sRGB"
+    renderer="colorManagement: true"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false">
+    </a-camera>
+
+    <!-- Ilustrasi = 1 x 1 unit. Tengah (0,0); kiri -0.5; kanan 0.5; atas 0.5; bawah -0.5.
+         Semua kandungan cerita dibina oleh JavaScript di dalam #dunia. -->
+    <a-entity id="sasaran" mindar-image-target="targetIndex: 0">
+      <a-entity id="dunia"></a-entity>
+    </a-entity>
+  </a-scene>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // Cerita dibina selepas adegan A-Frame siap dimuatkan (lebih lancar & tiada amaran konsol)
+    const adegan = document.querySelector('a-scene');
+    if (adegan.hasLoaded) { mulakan(); }
+    else { adegan.addEventListener('loaded', mulakan, { once: true }); }
+
+    function mulakan() {
+
+    /* ==================================================================
+       1. TETAPAN YANG BOLEH ANDA UBAH
+       ================================================================== */
+
+    // Tampal pautan kuiz/laman kamus anda di antara tanda petik, contohnya:
+    // const KUIZ_URL = 'https://nama-anda.github.io/kuiz/';
+    const KUIZ_URL = '../?hal=19';   // terus ke halaman Kuiz dalam buku (buku berada satu tahap di atas folder ini)
+
+    // Pilih suara narasi: 'yasmin' (perempuan, nada mesra) atau 'osman' (lelaki, nada mesra).
+    // Anda juga boleh membuat folder sendiri (contoh assets/audio/saya/) dan tulis 'saya'.
+    const SUARA = 'yasmin';
+    const AUDIO_DIR = 'assets/audio/' + SUARA + '/';
+
+    // Senarai klip narasi. "fail" = nama fail MP3 anda. "sari" = sari kata pendek.
+    // "maks" = tempoh maksimum klip (saat) supaya muat dalam animasi.
+    const KLIP = {
+      intro:      { fail: '01-pengenalan.mp3', maks: 6.2,  sari: 'Mari kita dengar ceritanya.' },
+      rumah:      { fail: '02-rumah.mp3',      maks: 8,    sari: 'Rumah kayu bertiang.' },
+      tangga:     { fail: '02-tangga.mp3',     maks: 8,    sari: 'Tangga untuk naik ke rumah.' },
+      tempayan:   { fail: '02-tempayan.mp3',   maks: 8,    sari: 'Tempat menyimpan air.' },
+      batuk:      { fail: '02-batuk.mp3',      maks: 8,    sari: 'Batuk ialah gayung tempurung.' },
+      cerita1:    { fail: '03-cerita-1.mp3',   maks: 3.6,  sari: 'Seorang budak menghampiri rumah.' },
+      cerita2:    { fail: '03-cerita-2.mp3',   maks: 3.0,  sari: 'Dia nampak tempayan berisi air.' },
+      cerita3:    { fail: '03-cerita-3.mp3',   maks: 3.3,  sari: 'Dia mengambil batuk.' },
+      cerita4:    { fail: '03-cerita-4.mp3',   maks: 3.9,  sari: 'Dia mencedok air dan membasuh kaki.' },
+      cerita5:    { fail: '03-cerita-5.mp3',   maks: 7,    sari: 'Batuk ditinggalkan di tangga.' },
+      maksud:     { fail: '04-maksud.mp3',     maks: 10.4, sari: 'Melakukan sesuatu secara sambil lewa.' },
+      pengajaran: { fail: '05-pengajaran.mp3', maks: 7.5,  sari: 'Lakukan setiap tugas dengan bersungguh-sungguh.' }
+    };
+
+    // Nama pendek objek (Babak 2): kedudukan pin, kotak ketik/serlah dan label
+    // [x, y] = tengah kotak; [w, h] = saiz kotak. Ilustrasi: -0.5 hingga 0.5.
+    const OBJEK = {
+      rumah:    { nama: 'Rumah Melayu tradisional', no: 1, pin: [0.12, 0.30],  kotak: [0.22, 0.27, 0.56, 0.42],  label: [0.10, 0.44],  z: 0.030 },
+      tangga:   { nama: 'Tangga',                   no: 2, pin: [-0.30, -0.14], kotak: [-0.20, -0.14, 0.46, 0.34], label: [-0.22, 0.07], z: 0.032 },
+      tempayan: { nama: 'Tempayan',                 no: 3, pin: [0.17, -0.36],  kotak: [0.17, -0.32, 0.42, 0.32],  label: [0.17, -0.49], z: 0.034 },
+      batuk:    { nama: 'Batuk (gayung)',            no: 4, pin: [0.31, -0.19],  kotak: [0.28, -0.14, 0.36, 0.14],  label: [0.22, -0.03], z: 0.036 }
+    };
+
+    /* ==================================================================
+       2. ALAT ASAS
+       ================================================================== */
+    const $ = (id) => document.getElementById(id);
+    const sceneEl = document.querySelector('a-scene');
+    const sasaran = $('sasaran');
+    const dunia = $('dunia');
+    const D2R = Math.PI / 180;
+    const lerp = (a, b, u) => a + (b - a) * u;
+
+    // ----- Alat melukis bentuk 2D (rata, tidak terkesan cahaya) -----
+    function bahan(c, extra) {
+      const m = { shader: 'flat', color: c, side: 'double' };
+      if (extra) {
+        extra.split(';').forEach(function (kv) {
+          const p = kv.split(':');
+          if (p.length < 2) return;
+          const v = p[1].trim();
+          m[p[0].trim()] = (v === 'true') ? true : (v === 'false') ? false : (isNaN(v) ? v : Number(v));
+        });
+      }
+      return m;                      // objek (bukan teks) supaya A-Frame tidak memberi amaran
+    }
+    function pos(e, x, y, z) { e.setAttribute('position', x + ' ' + y + ' ' + (z || 0)); }
+    function G(parent, x, y, z) {                       // kumpulan kosong
+      const e = document.createElement('a-entity');
+      pos(e, x, y, z); parent.appendChild(e); return e;
+    }
+    function R(parent, x, y, w, h, c, z, rot, extra) {  // segi empat
+      const e = document.createElement('a-plane');
+      e.setAttribute('width', w); e.setAttribute('height', h);
+      e.setAttribute('material', bahan(c, extra));
+      pos(e, x, y, z);
+      if (rot) e.setAttribute('rotation', '0 0 ' + rot);
+      parent.appendChild(e); return e;
+    }
+    function C(parent, x, y, r, c, z, extra, tStart, tLen) { // bulatan / separuh bulatan
+      const e = document.createElement('a-circle');
+      e.setAttribute('radius', r); e.setAttribute('segments', 28);
+      if (tStart !== undefined) { e.setAttribute('theta-start', tStart); e.setAttribute('theta-length', tLen); }
+      e.setAttribute('material', bahan(c, extra));
+      pos(e, x, y, z); parent.appendChild(e); return e;
+    }
+    function RG(parent, x, y, ri, ro, c, z) {           // cincin
+      const e = document.createElement('a-ring');
+      e.setAttribute('radius-inner', ri); e.setAttribute('radius-outer', ro);
+      e.setAttribute('segments-theta', 32);
+      e.setAttribute('material', bahan(c, 'transparent: true'));
+      pos(e, x, y, z); parent.appendChild(e); return e;
+    }
+    function TX(parent, value, x, y, w, c, z, wrap) {   // teks
+      const e = document.createElement('a-text');
+      e.setAttribute('value', value); e.setAttribute('align', 'center');
+      e.setAttribute('width', w); e.setAttribute('color', c);
+      e.setAttribute('wrap-count', wrap || value.length + 2);
+      pos(e, x, y, z); parent.appendChild(e); return e;
+    }
+    function denyut(e, prop, a, b, dur) {               // animasi berulang
+      e.setAttribute('animation__d', 'property: ' + prop + '; from: ' + a + '; to: ' + b +
+        '; dur: ' + dur + '; dir: alternate; loop: true; easing: easeInOutSine');
+    }
+    function bintang(parent, x, y, s, c, z) {           // bintang berkilau
+      const g = G(parent, x, y, z);
+      R(g, 0, 0, s, s * 0.28, c, 0);
+      R(g, 0, 0, s * 0.28, s, c, 0.001);
+      R(g, 0, 0, s * 0.7, s * 0.2, c, 0.002, 45);
+      R(g, 0, 0, s * 0.7, s * 0.2, c, 0.003, -45);
+      return g;
+    }
+
+    /* ==================================================================
+       3. ENJIN LINI MASA (timeline)
+       Setiap trek ialah fungsi masa: nilai ditentukan oleh masa "t".
+       Jadi jeda, sambung, main semula dan hilang-sasaran semuanya mudah.
+       ================================================================== */
+    function sample(k, t, lin, step) {
+      const n = k.length;
+      if (t <= k[0][0]) return k[0].slice(1);
+      if (t >= k[n - 1][0]) return k[n - 1].slice(1);
+      let i = 0;
+      while (k[i + 1][0] < t) i++;
+      const a = k[i], b = k[i + 1];
+      if (step) return a.slice(1);
+      let u = (t - a[0]) / (b[0] - a[0]);
+      if (!lin) u = u * u * (3 - 2 * u);
+      return a.slice(1).map((v, j) => lerp(v, b[j + 1], u));
+    }
+    const tr = (set, k, o) => ({ set: set, k: k, lin: !!(o && o.lin), step: !!(o && o.step) });
+    const tPos = (e, k, o) => tr((v) => { e.object3D.position.x = v[0]; e.object3D.position.y = v[1]; }, k, o);
+    const tRot = (e, k, o) => tr((v) => { e.object3D.rotation.z = v[0] * D2R; }, k, o);
+    const tScl = (e, k, o) => tr((v) => { e.object3D.scale.set(v[0], v.length > 1 ? v[1] : Math.abs(v[0]), 1); }, k, o);
+    const tVis = (e, k) => tr((v) => { e.object3D.visible = v[0] > 0.5; }, k, { step: true });
+    const tNum = (obj, key, k, o) => tr((v) => { obj[key] = v[0]; }, k, o);
+
+    /* ==================================================================
+       4. WATAK KARTUN (dibina daripada bentuk ringkas)
+       ================================================================== */
+    function buatWatak(parent, o) {
+      const g = G(parent, 0, 0, 0);
+      const ch = { g: g, st: { walk: 0, arm: 0, armW: 0 } };
+      C(g, 0, 0.004, 0.07, '#000000', -0.003, 'transparent: true; opacity: 0.22').setAttribute('scale', '1 0.25 1');
+
+      ch.armB = G(g, 0, 0.205, 0.002);
+      R(ch.armB, 0, -0.055, 0.03, 0.11, o.bajuGelap, 0);
+      C(ch.armB, 0, -0.12, 0.02, o.kulit, 0.001);
+
+      ch.legB = G(g, -0.02, 0.105, 0.004);
+      R(ch.legB, 0, -0.05, 0.036, 0.1, o.seluar, 0);
+      R(ch.legB, 0.012, -0.098, 0.056, 0.022, o.kasut, 0.001);
+
+      R(g, 0, 0.158, 0.1, 0.12, o.baju, 0.006);
+      R(g, 0, 0.108, 0.1, 0.03, o.seluar, 0.0065);
+
+      ch.legF = G(g, 0.02, 0.105, 0.008);
+      R(ch.legF, 0, -0.05, 0.036, 0.1, o.seluar, 0);
+      R(ch.legF, 0.012, -0.098, 0.056, 0.022, o.kasut, 0.001);
+
+      ch.head = G(g, 0, 0.258, 0.010);
+      C(ch.head, 0, 0, 0.047, o.kulit, 0);
+      R(ch.head, 0, 0.043, 0.085, 0.034, o.topi, 0.002);
+      C(ch.head, 0.022, 0.004, 0.007, '#2B1A0E', 0.004);
+
+      ch.armF = G(g, 0, 0.205, 0.014);
+      R(ch.armF, 0, -0.055, 0.034, 0.11, o.baju, 0);
+      C(ch.armF, 0, -0.12, 0.021, o.kulit, 0.001);
+      return ch;
+    }
+    // Menggerakkan kaki/tangan mengikut keadaan semasa (jalan, tangan)
+    function aturWatak(ch, t) {
+      const s = ch.st;
+      const sw = Math.sin(t * 9) * 0.6 * s.walk;
+      ch.legF.object3D.rotation.z = sw;
+      ch.legB.object3D.rotation.z = -sw;
+      ch.armB.object3D.rotation.z = -sw * 0.9;
+      ch.armF.object3D.rotation.z = lerp(sw * 0.9, s.arm * D2R, s.armW);
+      ch.g.object3D.position.y += Math.abs(Math.sin(t * 9)) * 0.008 * s.walk;
+    }
+    // Kedudukan tapak tangan (dunia) bagi watak
+    function tapakTangan(ch) {
+      const o = ch.g.object3D, phi = ch.armF.object3D.rotation.z, L = 0.12;
+      return [o.position.x + o.scale.x * L * Math.sin(phi),
+              o.position.y + o.scale.y * (0.205 - L * Math.cos(phi))];
+    }
+
+    /* ==================================================================
+       5. MEMBINA KANDUNGAN AR
+       ================================================================== */
+    const GR = {};            // kumpulan peringkat (tajuk, objek, kampung, kelas, tirai)
+    const HL = {};            // serlahan setiap objek
+    const HIT = {};           // kotak ketik
+
+    // ---------- (a) Tajuk Babak 1 ----------
+    (function () {
+      const g = GR.tajuk = G(dunia, 0, 0.36, 0.06);
+      const ap = G(g, 0, 0, 0);
+      R(ap, 0, 0, 0.84, 0.17, '#C9962B', 0);
+      R(ap, 0, 0, 0.81, 0.145, '#5A2E12', 0.002);
+      R(ap, 0, 0.064, 0.81, 0.011, '#C9962B', 0.003);
+      R(ap, 0, -0.064, 0.81, 0.011, '#C9962B', 0.003);
+      TX(ap, 'Melepaskan Batuk di Tangga', 0, 0.002, 0.70, '#F2C760', 0.006, 26);
+      ap.setAttribute('animation__f', 'property: position; from: 0 0 0; to: 0 0.015 0; dur: 1600; dir: alternate; loop: true; easing: easeInOutSine');
+    })();
+
+    // ---------- (b) Objek (Babak 2): pin, kotak ketik, serlahan ----------
+    (function () {
+      const g = GR.objek = G(dunia, 0, 0, 0.05);
+      Object.keys(OBJEK).forEach(function (key) {
+        const o = OBJEK[key];
+        // pin bernombor
+        const pin = G(g, o.pin[0], o.pin[1], 0.01);
+        const gelang = RG(pin, 0, 0, 0.040, 0.050, '#F2C760', 0);
+        gelang.setAttribute('animation__s', 'property: scale; from: 1 1 1; to: 1.7 1.7 1; dur: 1300; loop: true');
+        gelang.setAttribute('animation__o', 'property: material.opacity; from: 0.9; to: 0; dur: 1300; loop: true');
+        C(pin, 0, 0, 0.040, '#FFFFFF', 0.002);
+        C(pin, 0, 0, 0.032, '#C9962B', 0.004);
+        TX(pin, String(o.no), 0, 0, 0.2, '#FFFFFF', 0.007, 10);
+        o.pinEl = pin;
+
+        // kotak ketik (tidak kelihatan)
+        const hb = R(g, o.kotak[0], o.kotak[1], o.kotak[2], o.kotak[3], '#000000', o.z,
+                     0, 'transparent: true; opacity: 0; depthWrite: false');
+        HIT[key] = hb;
+
+        // serlahan (bingkai emas + isi lembut + label nama)
+        const h = HL[key] = G(dunia, 0, 0, 0.08);
+        const cx = o.kotak[0], cy = o.kotak[1], w = o.kotak[2], ht = o.kotak[3], t = 0.014;
+        const isi = R(h, cx, cy, w, ht, '#F2C760', 0, 0, 'transparent: true; opacity: 0.25');
+        denyut(isi, 'material.opacity', 0.12, 0.38, 700);
+        R(h, cx, cy + ht / 2, w + t, t, '#F2C760', 0.002);
+        R(h, cx, cy - ht / 2, w + t, t, '#F2C760', 0.002);
+        R(h, cx - w / 2, cy, t, ht, '#F2C760', 0.002);
+        R(h, cx + w / 2, cy, t, ht, '#F2C760', 0.002);
+        const lw = Math.max(0.3, o.nama.length * 0.024 + 0.07);
+        const lb = G(h, o.label[0], o.label[1], 0.01);
+        R(lb, 0, 0, lw + 0.012, 0.092, '#F2C760', 0);
+        R(lb, 0, 0, lw, 0.08, '#5A2E12', 0.002);
+        TX(lb, o.nama, 0, 0, lw - 0.03, '#FFFFFF', 0.005, o.nama.length + 2);
+        lb.setAttribute('animation__p', 'property: scale; from: 0.6 0.6 0.6; to: 1 1 1; dur: 350; easing: easeOutBack');
+      });
+    })();
+
+    // ---------- (c) Kampung: watak, batuk, air, tanda seru (Babak 3) ----------
+    const K = {};
+    (function () {
+      const g = GR.kampung = G(dunia, 0, 0, 0.05);
+      K.g = g;
+
+      // Cincin sorotan pada tempayan + riak air di mulut tempayan
+      K.sorot = RG(g, 0.17, -0.16, 0.19, 0.205, '#F2C760', 0.01);
+      K.sorot.setAttribute('scale', '1 0.45 1');
+      K.sorot.setAttribute('animation__o', 'property: material.opacity; from: 1; to: 0.25; dur: 600; dir: alternate; loop: true');
+      K.riak = RG(g, 0.166, -0.157, 0.05, 0.058, '#D9F0FF', 0.012);
+      K.riak.setAttribute('animation__s', 'property: scale; from: 0.5 0.15 1; to: 1.7 0.5 1; dur: 800; loop: true');
+      K.riak.setAttribute('animation__o', 'property: material.opacity; from: 1; to: 0; dur: 800; loop: true');
+
+      // Cincin tanda "sudah diletak" pada tangga
+      K.tanda = RG(g, -0.23, -0.21, 0.075, 0.088, '#F2C760', 0.01);
+      K.tanda.setAttribute('scale', '1 0.7 1');
+      K.tanda.setAttribute('animation__o', 'property: material.opacity; from: 1; to: 0.3; dur: 600; dir: alternate; loop: true');
+
+      // Titisan air
+      K.titik = [];
+      for (let i = 0; i < 3; i++) K.titik.push(C(g, 0, 0, 0.011, '#7CC4EE', 0.06));
+      K.percik = RG(g, 0.4, -0.425, 0.02, 0.03, '#D9F0FF', 0.03);
+      K.percik.setAttribute('scale', '1 0.35 1');
+      K.percik.setAttribute('animation__s', 'property: scale; from: 0.4 0.14 1; to: 1.5 0.5 1; dur: 600; loop: true');
+
+      // Batuk (gayung tempurung). Pangkal (0,0) = tempat dipegang.
+      const b = K.batuk = G(g, 0.327, -0.174, 0.03);
+      R(b, 0, 0.012, 0.25, 0.012, '#B27B45', 0, -7);
+      C(b, -0.155, 0.035, 0.044, '#7A4A24', 0.002, null, 180, 180);
+      R(b, -0.155, 0.035, 0.092, 0.011, '#4A2B12', 0.003);
+      K.air = R(b, -0.155, 0.027, 0.07, 0.014, '#7CC4EE', 0.004);
+
+      // Watak kanak-kanak
+      const w = K.watak = buatWatak(g, { baju: '#1E88A0', bajuGelap: '#17697C', seluar: '#F2E3C3',
+                                         kulit: '#E0A46E', topi: '#222222', kasut: '#4A2F1B' });
+      w.g.object3D.position.z = 0.04;
+      pos(w.g, 0.8, -0.42, 0.04);
+      // Tanda seru di atas kepala
+      const tb = K.seru = G(w.g, 0, 0.42, 0.03);
+      C(tb, 0, 0, 0.048, '#FFFFFF', 0);
+      RG(tb, 0, 0, 0.044, 0.052, '#C9962B', 0.001);
+      R(tb, 0, 0.012, 0.013, 0.04, '#C0392B', 0.003);
+      C(tb, 0, -0.026, 0.008, '#C0392B', 0.003);
+    })();
+
+    // ---------- (d) Bilik darjah (Babak 4 & 5) ----------
+    const KL = { sampahKiri: [], sampahKanan: [] };
+    (function () {
+      const g = GR.kelas = G(dunia, 0, 0, 0.08);
+      KL.g = g;
+      R(g, 0, 0, 1.0, 1.0, '#F4E4BC', 0);
+      R(g, 0, -0.30, 1.0, 0.40, '#C99A62', 0.001);
+      for (let i = 0; i < 6; i++) R(g, 0, -0.14 - i * 0.065, 1.0, 0.004, '#B3834C', 0.002);
+      R(g, 0, -0.10, 1.0, 0.025, '#8B5A2B', 0.003);
+
+      // papan hitam
+      R(g, 0, 0.26, 0.58, 0.28, '#8B5A2B', 0.004);
+      R(g, 0, 0.26, 0.54, 0.24, '#2F5D50', 0.005);
+      R(g, -0.12, 0.30, 0.20, 0.008, '#F2F2F2', 0.006, 3);
+      R(g, -0.08, 0.26, 0.28, 0.008, '#F2F2F2', 0.006, -2);
+      R(g, -0.14, 0.22, 0.16, 0.008, '#F2F2F2', 0.006, 1);
+      R(g, 0.20, 0.31, 0.10, 0.008, '#F2C760', 0.006);
+      R(g, 0.0, 0.135, 0.5, 0.012, '#6B3F1D', 0.006);
+
+      // tingkap
+      R(g, -0.40, 0.30, 0.18, 0.24, '#8B5A2B', 0.004);
+      R(g, -0.40, 0.30, 0.15, 0.21, '#9AD0EC', 0.005);
+      R(g, -0.40, 0.30, 0.012, 0.21, '#8B5A2B', 0.006);
+      R(g, -0.40, 0.30, 0.15, 0.012, '#8B5A2B', 0.006);
+      // jam
+      C(g, 0.40, 0.36, 0.055, '#6B3F1D', 0.004);
+      C(g, 0.40, 0.36, 0.048, '#FFFFFF', 0.005);
+      R(g, 0.40, 0.375, 0.006, 0.03, '#222', 0.006);
+      R(g, 0.41, 0.36, 0.024, 0.006, '#222', 0.006);
+
+      // meja
+      [-0.30, 0.0, 0.30].forEach(function (x) {
+        R(g, x, -0.02, 0.2, 0.05, '#B07A45', 0.007);
+        R(g, x - 0.08, -0.07, 0.014, 0.07, '#6B3F1D', 0.006);
+        R(g, x + 0.08, -0.07, 0.014, 0.07, '#6B3F1D', 0.006);
+      });
+
+      // tong sampah (kanan)
+      R(g, 0.43, -0.26, 0.09, 0.11, '#7B8794', 0.01);
+      R(g, 0.43, -0.205, 0.105, 0.016, '#56606B', 0.011);
+
+      // sampah: kiri (disapu dalam Babak 4), kanan (ditinggalkan)
+      const kiri = [[-0.41, -0.33], [-0.30, -0.43], [-0.22, -0.31], [-0.12, -0.40], [-0.35, -0.22], [-0.19, -0.46], [-0.06, -0.30]];
+      const kanan = [[0.06, -0.38], [0.17, -0.44], [0.27, -0.32], [0.35, -0.42], [0.38, -0.33], [0.24, -0.47], [0.13, -0.29]];
+      function kertas(x, y, i) {
+        const p = G(g, x, y, 0.02);
+        const c = i % 3 === 0 ? '#F4F4F4' : (i % 3 === 1 ? '#DDD5C2' : '#E9C46A');
+        C(p, 0, 0, 0.022, c, 0);
+        C(p, 0.007, 0.004, 0.013, '#BFB7A5', 0.001);
+        return { el: p, x: x, y: y };
+      }
+      kiri.forEach(function (p, i) { KL.sampahKiri.push(kertas(p[0], p[1], i)); });
+      kanan.forEach(function (p, i) { KL.sampahKanan.push(kertas(p[0], p[1], i + 1)); });
+
+      // tanda "!" merah pada sampah yang ditinggalkan
+      KL.amaran = RG(g, 0.24, -0.39, 0.17, 0.185, '#D9442B', 0.015);
+      KL.amaran.setAttribute('scale', '1 0.55 1');
+      KL.amaran.setAttribute('animation__o', 'property: material.opacity; from: 1; to: 0.25; dur: 600; dir: alternate; loop: true');
+
+      // sapu bersandar di dinding
+      KL.sapuSandar = G(g, -0.15, -0.16, 0.03);
+      KL.sapuSandar.setAttribute('rotation', '0 0 14');
+      R(KL.sapuSandar, 0, 0, 0.014, 0.27, '#8B5A2B', 0);
+      R(KL.sapuSandar, 0, -0.15, 0.06, 0.045, '#D4A84B', 0.001);
+
+      // murid
+      const m = KL.murid = buatWatak(g, { baju: '#FFFFFF', bajuGelap: '#E3DCCB', seluar: '#27408B',
+                                          kulit: '#E0A46E', topi: '#1B1B1B', kasut: '#2B2B2B' });
+      pos(m.g, -0.7, -0.27, 0.04);
+      // sapu di tangan
+      KL.sapuTangan = G(m.armF, 0, -0.12, 0.01);
+      R(KL.sapuTangan, 0, -0.02, 0.014, 0.27, '#8B5A2B', 0);
+      R(KL.sapuTangan, 0, -0.165, 0.06, 0.045, '#D4A84B', 0.001);
+
+      // bintang berkilau di lantai & tanda betul (Babak 5)
+      KL.bintang = [[-0.30, -0.36, 0.07], [-0.05, -0.43, 0.06], [0.18, -0.36, 0.07], [0.33, -0.44, 0.055], [-0.18, -0.27, 0.05]]
+        .map(function (p) { const s = bintang(g, p[0], p[1], p[2], '#FFD966', 0.05); return s; });
+      const tk = KL.tik = G(g, 0, 0.04, 0.05);
+      C(tk, 0, 0, 0.12, '#FFFFFF', 0);
+      C(tk, 0, 0, 0.105, '#1F8A5B', 0.002);
+      R(tk, -0.04, -0.012, 0.05, 0.022, '#FFFFFF', 0.004, -45);
+      R(tk, 0.018, 0.012, 0.11, 0.022, '#FFFFFF', 0.004, 45);
+    })();
+
+    // ---------- (e) Tirai peralihan ----------
+    (function () {
+      const g = GR.tirai = G(dunia, -1.4, 0, 0.2);
+      R(g, 0, 0, 1.3, 1.3, '#F6E7C6', 0);
+      R(g, 0.65, 0, 0.03, 1.3, '#C9962B', 0.001);
+      R(g, 0.60, 0, 0.012, 1.3, '#5A2E12', 0.001);
+    })();
+
+    /* ==================================================================
+       6. LINI MASA SETIAP BABAK
+       ================================================================== */
+    const W = K.watak, M = KL.murid;
+    const rad = (d) => d;   // (sudut dalam darjah)
+
+    const STAGES = {};
+
+    // ---- Babak 1: Pengenalan ----
+    STAGES[1] = {
+      dur: 6.3, show: ['tajuk'],
+      cues: [[0, 'intro']],
+      tracks: [
+        tScl(GR.tajuk, [[0, 1, 1], [0.5, 1.07, 1.07], [1.2, 1, 1]])
+      ]
+    };
+
+    // ---- Babak 2: Kenali objek (tiada lini masa; menunggu ketikan) ----
+    STAGES[2] = { dur: null, show: ['objek'], cues: [], tracks: [] };
+
+    // ---- Babak 3: Cerita ----
+    (function () {
+      // kedudukan tangan pada saat penting (dikira daripada reka bentuk watak)
+      const PLACE = [0.04 - 0.12 * Math.sin(80 * D2R), -0.42 + (0.205 - 0.12 * Math.cos(80 * D2R))];
+      K.PLACE = PLACE;
+      STAGES[3] = {
+        dur: 21, show: ['kampung'],
+        cues: [[0, 'cerita1'], [3.6, 'cerita2'], [6.6, 'cerita3'], [10.0, 'cerita4'], [14.0, 'cerita5']],
+        tracks: [
+          // watak berjalan masuk dari kanan, ke tempayan, ke tangga, naik ke rumah
+          tPos(W.g, [[0, 0.80, -0.42], [3.6, 0.40, -0.42], [14.0, 0.40, -0.42], [16.6, 0.04, -0.42],
+                     [17.8, 0.04, -0.42], [18.6, -0.12, -0.33], [19.4, -0.06, -0.10], [20.2, 0.05, 0.03], [20.8, 0.10, 0.06]], { lin: true }),
+          tScl(W.g, [[0, -1, 1], [18.2, -1, 1], [18.5, 1, 1], [19.4, 0.85, 0.85], [20.2, 0.7, 0.7], [20.8, 0.62, 0.62]]),
+          tVis(W.g, [[0, 1], [20.9, 0]]),
+          // jalan
+          tNum(W.st, 'walk', [[0, 1], [3.4, 1], [3.8, 0], [13.9, 0], [14.2, 1], [16.4, 1], [16.7, 0], [17.9, 0], [18.2, 1], [20.8, 1]], { lin: true }),
+          // tangan kanan (sudut dalam darjah)
+          tNum(W.st, 'arm', [[0, 0], [6.4, 0], [7.0, 110], [8.2, 130], [9.8, 130], [10.6, 100], [11.3, 100], [12.1, 130],
+                             [13.0, 25], [13.8, 25], [14.3, 40], [16.6, 40], [17.3, 80], [17.7, 80], [18.2, 0], [20.8, 0]]),
+          tNum(W.st, 'armW', [[0, 0], [6.3, 0], [6.5, 1], [17.9, 1], [18.3, 0], [18.9, 0]], { lin: true }),
+          // tanda seru
+          tScl(K.seru, [[0, 0], [4.2, 0], [4.6, 1.25], [4.9, 1], [6.3, 1], [6.6, 0]]),
+          // sorotan tempayan & riak
+          tVis(K.sorot, [[0, 0], [4.0, 1], [6.6, 0]]),
+          tVis(K.riak, [[0, 0], [10.7, 1], [11.5, 0]]),
+          // batuk: kekal di tempat asal sehingga dipegang, kemudian diletak di tangga
+          tVis(K.batuk, [[0, 0], [7.0, 1]]),
+          tRot(K.batuk, [[0, -0], [12.2, 0], [13.0, 50], [13.9, 50], [14.3, 0]]),
+          tVis(K.air, [[0, 0], [11.3, 1], [13.0, 0]]),
+          // titisan air & percikan pada kaki
+          tVis(K.percik, [[0, 0], [13.2, 1], [14.1, 0]]),
+          tVis(K.tanda, [[0, 0], [17.7, 1], [19.8, 0]])
+        ],
+        post: function (t) {
+          aturWatak(W, t);
+          const b = K.batuk.object3D;
+          if (t >= 7.0 && t < 17.6) {                 // batuk dipegang
+            const h = tapakTangan(W);
+            b.position.x = h[0]; b.position.y = h[1];
+          } else if (t >= 17.6) {                     // diletak di tangga
+            b.position.x = PLACE[0]; b.position.y = PLACE[1]; b.rotation.z = 0;
+          } else {                                    // di tempat asal
+            b.position.x = 0.327; b.position.y = -0.174;
+          }
+          // titisan air jatuh daripada mangkuk batuk ke kaki
+          const on = t >= 13.1 && t < 14.0;
+          for (let i = 0; i < K.titik.length; i++) {
+            const e = K.titik[i].object3D;
+            e.visible = on;
+            if (on) {
+              const ph = ((t * 2.4) + i / 3) % 1;
+              const bx = b.position.x - 0.12, by = b.position.y - 0.10;
+              e.position.x = lerp(bx, 0.40, ph);
+              e.position.y = lerp(by, -0.42, ph * ph);
+            }
+          }
+        }
+      };
+    })();
+
+    // ---- Babak 4: Makna tersirat (bilik darjah) ----
+    (function () {
+      const tk = [];
+      // peralihan tirai
+      tk.push(tPos(GR.tirai, [[0, -1.4, 0], [0.7, 0, 0], [0.7, 0, 0], [1.4, 1.4, 0]]));
+      tk.push(tVis(K.g, [[0, 1], [0.7, 0]]));
+      tk.push(tVis(KL.g, [[0, 0], [0.7, 1]]));
+      // babak 5 tidak guna sapu tersandar pada mulanya; di sini ia muncul selepas murid pergi
+      tk.push(tVis(KL.sapuSandar, [[0, 0], [6.7, 1]]));
+      tk.push(tVis(KL.sapuTangan, [[0, 1], [6.6, 0]]));
+      tk.push(tVis(KL.amaran, [[0, 0], [8.0, 1]]));
+      // murid
+      tk.push(tPos(M.g, [[0, -0.7, -0.27], [1.4, -0.7, -0.27], [2.2, -0.40, -0.27], [3.4, -0.12, -0.27],
+                         [4.6, -0.40, -0.27], [5.8, -0.12, -0.27], [6.6, -0.12, -0.27], [9.6, -0.85, -0.27]], { lin: true }));
+      tk.push(tScl(M.g, [[0, 1.25, 1.25], [6.6, 1.25, 1.25], [6.9, -1.25, 1.25], [12, -1.25, 1.25]]));
+      tk.push(tNum(M.st, 'walk', [[0, 0], [1.4, 0], [1.5, 1], [2.2, 1], [2.3, 0], [6.8, 0], [7.0, 1], [9.6, 1]], { lin: true }));
+      tk.push(tNum(M.st, 'armW', [[0, 0], [1.4, 0], [2.2, 1], [6.7, 1], [7.0, 0]], { lin: true }));
+      // sapu: ayunan dikira dalam post()
+      // sampah kiri disapu satu demi satu
+      KL.sampahKiri.forEach(function (p, i) {
+        const ts = 2.6 + (i / (KL.sampahKiri.length - 1)) * 3.0;
+        tk.push(tScl(p.el, [[0, 1], [ts, 1], [ts + 0.35, 0]]));
+      });
+      KL.sampahKanan.forEach(function (p) { tk.push(tScl(p.el, [[0, 1], [12, 1]])); });
+      tk.push(tScl(KL.tik, [[0, 0], [12, 0]]));
+      KL.bintang.forEach(function (s) { tk.push(tVis(s, [[0, 0], [12, 0]])); });
+
+      STAGES[4] = {
+        dur: 11.4, show: ['kampung', 'kelas', 'tirai'],
+        cues: [[1.0, 'maksud']],
+        tracks: tk,
+        post: function (t) {
+          // ayunan sapu
+          const sweeping = t >= 2.2 && t < 6.7;
+          M.st.arm = sweeping ? 52 + 20 * Math.sin(t * 7) : 0;
+          aturWatak(M, t);
+        }
+      };
+    })();
+
+    // ---- Babak 5: Kesimpulan ----
+    (function () {
+      const tk = [];
+      tk.push(tPos(GR.tirai, [[0, -1.4, 0], [12, -1.4, 0]]));
+      tk.push(tVis(K.g, [[0, 0], [7, 0]]));
+      tk.push(tVis(KL.g, [[0, 1], [7, 1]]));
+      tk.push(tVis(KL.amaran, [[0, 0], [7, 0]]));
+      tk.push(tVis(KL.sapuSandar, [[0, 1], [1.0, 1], [1.01, 0]]));
+      tk.push(tVis(KL.sapuTangan, [[0, 0], [1.0, 0], [1.01, 1]]));
+      tk.push(tPos(M.g, [[0, -0.75, -0.27], [1.0, -0.40, -0.27], [1.8, -0.02, -0.27], [4.4, 0.34, -0.27], [5.0, 0.34, -0.27]], { lin: true }));
+      tk.push(tScl(M.g, [[0, 1.25, 1.25], [7, 1.25, 1.25]]));
+      tk.push(tNum(M.st, 'walk', [[0, 1], [1.8, 1], [2.0, 0], [4.4, 0], [4.5, 0]], { lin: true }));
+      tk.push(tNum(M.st, 'armW', [[0, 0], [1.2, 0], [1.8, 1], [7, 1]], { lin: true }));
+      // sampah kiri sudah bersih; sampah kanan disapu masuk ke tong
+      KL.sampahKiri.forEach(function (p) { tk.push(tScl(p.el, [[0, 0], [7, 0]])); });
+      KL.sampahKanan.forEach(function (p) {
+        const ts = 2.0 + Math.max(0, (p.x - 0.0) / 0.4) * 2.2;
+        tk.push(tPos(p.el, [[0, p.x, p.y], [ts, p.x, p.y], [ts + 0.35, lerp(p.x, 0.43, 0.5), p.y + 0.10], [ts + 0.7, 0.43, -0.18]], { lin: true }));
+        tk.push(tScl(p.el, [[0, 1], [ts + 0.6, 1], [ts + 0.8, 0]]));
+      });
+      // bintang berkilau, kemudian tanda betul
+      KL.bintang.forEach(function (s, i) {
+        const ts = 4.4 + i * 0.25;
+        tk.push(tVis(s, [[0, 0], [ts, 1]]));
+        tk.push(tScl(s, [[0, 0], [ts, 0], [ts + 0.4, 1.2], [ts + 0.8, 0.8], [ts + 1.2, 1.1]]));
+      });
+      tk.push(tScl(KL.tik, [[0, 0], [5.0, 0], [5.4, 1.25], [5.8, 1]]));
+
+      STAGES[5] = {
+        dur: 7.6, show: ['kelas'],
+        cues: [[0.3, 'pengajaran']],
+        tracks: tk,
+        post: function (t) {
+          const sweeping = t >= 1.8 && t < 4.6;
+          M.st.arm = sweeping ? 50 + 20 * Math.sin(t * 8) : (t >= 4.6 ? 15 : 0);
+          aturWatak(M, t);
+          // tangan murid yang menyapu sentiasa menghadap kanan
+        }
+      };
+    })();
+
+    /* ==================================================================
+       7. AUDIO NARASI — SATU pemain sahaja (tiada bunyi bertindih)
+       ================================================================== */
+    const narator = new Audio();
+    narator.preload = 'auto';
+
+    /* ==================================================================
+       8. KEADAAN & PENGAWAL
+       ================================================================== */
+    const S = {
+      stage: 1, t: 0, cueI: 0,
+      started: false,      // sudah ketik Mula
+      paused: false,       // dijeda oleh pengguna
+      autoPaused: false,   // dijeda kerana ilustrasi hilang
+      muted: false,
+      found: false,
+      obj: null,           // objek yang dipilih (Babak 2)
+      klip: null,          // klip yang sedang dimainkan
+      tamat: false         // cerita sudah tamat
+    };
+    const running = () => S.started && !S.paused && !S.autoPaused;
+
+    // ----- Sari kata -----
+    function sari(teks) {
+      const el = $('sari');
+      if (!teks) { el.className = ''; el.textContent = ''; return; }
+      el.textContent = teks;
+      el.className = '';
+      void el.offsetWidth;
+      el.className = 'ada';
+    }
+
+    // ----- Audio -----
+    function mainKlip(id) {
+      const k = KLIP[id];
+      S.klip = id;
+      sari(k.sari);
+      narator.muted = S.muted;
+      narator.src = AUDIO_DIR + k.fail;       // menukar fail = menghentikan klip sebelumnya
+      narator.currentTime = 0;
+      if (running()) {
+        const p = narator.play();
+        if (p && p.catch) p.catch(function () { /* fail audio belum ada: cerita diteruskan dengan sari kata */ });
+      }
+    }
+    function hentiAudio() {
+      S.klip = null;
+      narator.pause();
+      narator.removeAttribute('src');
+    }
+    function segerakAudio() {
+      if (!S.klip) return;
+      if (running()) {
+        const p = narator.play();
+        if (p && p.catch) p.catch(function () {});
+      } else {
+        narator.pause();
+      }
+    }
+
+    // ----- Peralihan babak -----
+    function keBabak(n) {
+      S.stage = Math.min(Math.max(n, 1), 5);
+      S.t = 0; S.cueI = 0; S.obj = null; S.tamat = false;
+      hentiAudio();
+      if (S.stage === 2) sari('Tekan objek untuk mengenalinya.');
+      else sari('');
+      kemasUI();
+    }
+
+    // ----- Objek (Babak 2) -----
+    function pilihObjek(key) {
+      if (S.stage !== 2 || !S.started) return;
+      S.obj = key;
+      S.paused = false;
+      mainKlip(key);
+      kemasUI();
+    }
+    function kembaliDariObjek() {
+      S.obj = null;
+      hentiAudio();
+      sari('Tekan objek untuk mengenalinya.');
+      kemasUI();
+    }
+
+    // ----- Ketik objek pada ilustrasi (sentuhan jari atau tetikus) -----
+    const THREE = AFRAME.THREE;
+    const sinar = new THREE.Raycaster();
+    const titik = new THREE.Vector2();
+    let mulaKetik = null;
+    document.addEventListener('pointerdown', function (e) {
+      mulaKetik = (e.target === sceneEl.canvas) ? { x: e.clientX, y: e.clientY } : null;
+    }, true);
+    document.addEventListener('pointerup', function (e) {
+      const m = mulaKetik; mulaKetik = null;
+      if (!m || e.target !== sceneEl.canvas) return;
+      if (Math.hypot(e.clientX - m.x, e.clientY - m.y) > 14) return;   // seretan, bukan ketikan
+      if (S.stage !== 2 || !S.started || !S.found) return;
+      const r = sceneEl.canvas.getBoundingClientRect();
+      titik.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      sinar.setFromCamera(titik, sceneEl.camera);
+      const senarai = [];
+      Object.keys(HIT).forEach(function (k) { const mesh = HIT[k].getObject3D('mesh'); if (mesh) senarai.push(mesh); });
+      const kena = sinar.intersectObjects(senarai, false);
+      if (kena.length) {
+        const k = Object.keys(HIT).find(function (n) { return HIT[n].getObject3D('mesh') === kena[0].object; });
+        if (k) pilihObjek(k);
+      }
+    }, true);
+
+    // ----- UI -----
+    const IKON_JEDA = '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+    const IKON_MAIN = '<svg viewBox="0 0 24 24"><path d="M7 5v14l12-7z"/></svg>';
+    const IKON_BUNYI = '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>';
+    const IKON_SENYAP = '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9H3z"/><path d="M15 9.5l6 5M21 9.5l-6 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
+
+    function tunjuk(id, ya) { $(id).hidden = !ya; }
+    function kemasUI() {
+      const st = S.stage;
+      $('btn-mula').className = 'besar' + (!S.started ? ' ada' : '');
+      tunjuk('btn-jeda', S.started);
+      tunjuk('btn-ulang', S.started);
+      $('btn-jeda').innerHTML = S.paused ? IKON_MAIN : IKON_JEDA;
+      $('btn-bisu').innerHTML = S.muted ? IKON_SENYAP : IKON_BUNYI;
+      // navigasi lima babak
+      $('nav').className = S.started ? 'ada' : '';
+      $('btn-prev').disabled = (st === 1);
+      tunjuk('btn-next', st < 5);
+      tunjuk('btn-restart', st === 5);
+      // butang tindakan
+      tunjuk('btn-kembali', st === 2 && !!S.obj);
+      tunjuk('btn-kuiz', st === 5);
+      $('aksi').className = ((st === 2 && S.obj) || st === 5) && S.started ? 'ada' : '';
+      // penunjuk babak
+      const dots = $('dots').children;
+      for (let i = 0; i < dots.length; i++) dots[i].className = (i < st) ? 'aktif' : '';
+    }
+
+    let pemasaToast = null;
+    function toast(teks) {
+      const t = $('toast');
+      t.textContent = teks; t.className = 'papar';
+      clearTimeout(pemasaToast);
+      pemasaToast = setTimeout(function () { t.className = ''; }, 2600);
+    }
+
+    // ----- Butang -----
+    $('btn-mula').addEventListener('click', function () {
+      // Audio hanya bermula selepas ketikan ini (syarat iPhone & Android)
+      S.started = true; S.paused = false;
+      keBabak(1);
+    });
+    $('btn-jeda').addEventListener('click', function () {
+      S.paused = !S.paused;
+      segerakAudio(); kemasUI();
+    });
+    $('btn-bisu').addEventListener('click', function () {
+      S.muted = !S.muted;
+      narator.muted = S.muted; kemasUI();
+    });
+    $('btn-ulang').addEventListener('click', function () {
+      S.paused = false;
+      if (S.stage === 2 && S.obj) { mainKlip(S.obj); }
+      else { keBabak(S.stage); }
+      kemasUI();
+    });
+    $('btn-next').addEventListener('click', function () { S.paused = false; keBabak(S.stage + 1); });
+    $('btn-prev').addEventListener('click', function () { S.paused = false; keBabak(S.stage - 1); });
+    $('btn-restart').addEventListener('click', function () { S.paused = false; keBabak(1); });
+    $('btn-kembali').addEventListener('click', kembaliDariObjek);
+    $('btn-kuiz').addEventListener('click', function () {
+      if (KUIZ_URL) { window.location.href = KUIZ_URL; }
+      else { toast('Pautan kuiz belum ditetapkan. Lihat KUIZ_URL dalam index.html.'); }
+    });
+
+    /* ==================================================================
+       9. PENJEJAKAN IMEJ (sama seperti asal + jeda automatik)
+       ================================================================== */
+    const elStatus = $('status');
+    let pemasaHilang = null;
+
+    sasaran.addEventListener('targetFound', function () {
+      clearTimeout(pemasaHilang);
+      S.found = true;
+      S.autoPaused = false;
+      document.body.classList.add('target-found');
+      elStatus.textContent = 'Ilustrasi berjaya dikesan!';
+      segerakAudio();
+    });
+    sasaran.addEventListener('targetLost', function () {
+      S.found = false;
+      S.autoPaused = true;                // cerita & audio dijeda
+      segerakAudio();
+      elStatus.textContent = 'Cari semula ilustrasi anda. Cerita akan disambung.';
+      clearTimeout(pemasaHilang);
+      pemasaHilang = setTimeout(function () {
+        document.body.classList.remove('target-found');
+      }, 700);
+    });
+    sceneEl.addEventListener('arReady', function () {
+      elStatus.textContent = 'Kamera sedia. Halakan ke gambar rumah Melayu.';
+    });
+    // Semak fail sasaran: jika tiada di folder ini, beritahu dengan jelas
+    fetch('./target-baharu.mind', { method: 'HEAD', cache: 'no-store' }).then(function (r) {
+      if (!r.ok) elStatus.textContent = 'Fail target-baharu.mind tidak ditemui dalam folder batuk. Sila muat naik fail ini.';
+    }).catch(function () { /* tiada rangkaian: biarkan mesej biasa */ });
+    sceneEl.addEventListener('arError', function () {
+      elStatus.textContent = 'Kamera tidak dapat dibuka. Sila benarkan akses kamera, kemudian muat semula halaman.';
+    });
+
+    /* ==================================================================
+       10. GELUNG ANIMASI
+       ================================================================== */
+    let akhir = performance.now();
+    function gelung(now) {
+      requestAnimationFrame(gelung);
+      const dt = Math.min((now - akhir) / 1000, 0.1);
+      akhir = now;
+
+      const st = STAGES[S.stage];
+      if (running() && st.dur && !S.tamat) {
+        S.t += dt;
+        while (S.cueI < st.cues.length && S.t >= st.cues[S.cueI][0]) {
+          mainKlip(st.cues[S.cueI][1]); S.cueI++;
+        }
+        if (S.t >= st.dur) { S.t = st.dur; S.tamat = true; }   // berhenti; tunggu "Seterusnya"
+      }
+      lukis();
+    }
+    function lukis() {
+      const st = STAGES[S.stage];
+      for (const nama in GR) GR[nama].object3D.visible = st.show.indexOf(nama) >= 0;
+      for (const k in HL) HL[k].object3D.visible = (S.stage === 2 && S.obj === k);
+      for (const k in OBJEK) OBJEK[k].pinEl.object3D.visible = !(S.stage === 2 && S.obj === k);
+      st.tracks.forEach(function (tk) { tk.set(sample(tk.k, S.t, tk.lin, tk.step)); });
+      if (st.post) st.post(S.t);
+    }
+
+    sari('Tekan Mula untuk bermula.');
+    kemasUI();
+    requestAnimationFrame(gelung);
+    }   // akhir mulakan()
+  })();
+  </script>
+
+</body>
+</html>

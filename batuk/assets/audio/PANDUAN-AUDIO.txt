@@ -1,0 +1,42 @@
+PANDUAN AUDIO NARASI - PeribahasaAR "Melepaskan Batuk di Tangga"
+=================================================================
+
+ISI FOLDER INI
+  yasmin/  12 fail - suara Yasmin (perempuan), nada lebih mesra
+  osman/   12 fail - suara Osman (lelaki), nada lebih mesra
+
+PENTING: Ini ialah SUARA KOMPUTER (text-to-speech, Microsoft Edge:
+ms-MY-YasminNeural dan ms-MY-OsmanNeural), BUKAN rakaman suara manusia.
+Anda boleh menggantikannya dengan rakaman sendiri pada bila-bila masa.
+
+MENUKAR SUARA
+  Dalam index.html, cari baris:   const SUARA = 'yasmin';
+  Tukar kepada 'osman' untuk suara lelaki, kemudian muat naik index.html.
+
+GANTI DENGAN REKAMAN SENDIRI
+  1. Buat folder baharu, contoh: assets/audio/saya/
+  2. Rakam 12 klip dan namakan TEPAT seperti jadual (MP3, huruf kecil).
+  3. Tukar:  const SUARA = 'saya';
+  Petua: rakam di bilik senyap, potong senyap di awal/akhir klip.
+
+JADUAL KLIP (teks narasi yang digunakan)
+Maks = ruang masa dalam animasi. Klip yang lebih panjang akan terpotong
+apabila klip seterusnya bermula.
+
+Fail                Maks    Teks narasi
+------------------  ------  --------------------------------------------------
+01-pengenalan.mp3   6.2 s   Selamat datang! Inilah peribahasa melepaskan batuk di tangga.
+02-rumah.mp3        8 s     Ini rumah Melayu tradisional. Rumah kayu yang tinggi bertiang, dengan serambi.
+02-tangga.mp3       8 s     Ini tangga. Dari sini, kita naik ke dalam rumah.
+02-tempayan.mp3     8 s     Ini tempayan, tempat menyimpan air.
+02-batuk.mp3        8 s     Dan ini batuk, atau gayung tempurung, untuk mencedok air.
+03-cerita-1.mp3     3.6 s   Seorang budak menghampiri rumah.
+03-cerita-2.mp3     3.0 s   Dia nampak tempayan air.
+03-cerita-3.mp3     3.3 s   Dia mengambil batuk itu.
+03-cerita-4.mp3     3.9 s   Dia mencedok air, membasuh kaki.
+03-cerita-5.mp3     7 s     Kemudian, batuk itu ditinggalkan di tangga, dan dia masuk ke dalam rumah.
+04-maksud.mp3       10.4 s  Peribahasa ini membawa maksud melakukan sesuatu pekerjaan secara sambil lewa, tidak bersungguh-sungguh atau tidak menyelesaikannya dengan sempurna.
+05-pengajaran.mp3   7.5 s   Pengajarannya, setiap tugasan hendaklah dilakukan dengan penuh tanggungjawab dan bersungguh-sungguh.
+
+Sari kata (teks pendek di skrin) ditetapkan dalam index.html, di bahagian
+"const KLIP = {...}".
